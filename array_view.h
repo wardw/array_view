@@ -4,10 +4,52 @@
 #include <initializer_list>
 #include <array>
 
-namespace hummingbird
+/*
+template <size_t Rank>
+class offset
 {
+public:
+	// constants and types
+	static constexpr size_t rank = Rank;
+	using reference              = ptrdiff_t&;
+	using const_reference        = const ptrdiff_t&;
+	using size_type              = size_t;
+	using value_type             = ptrdiff_t;
 
-template <size_t Rank> class offset;
+	static_assert(Rank > 0, "Size of Rank must be greater than 0");
+
+	// construction
+	constexpr offset() noexcept;
+	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
+	constexpr offset(value_type v) noexcept;
+	constexpr offset(std::initializer_list<value_type> il);
+
+	// element access
+	constexpr reference       operator[](size_type n);
+	constexpr const_reference operator[](size_type n) const;
+
+	// arithmetic
+	constexpr offset& operator+=(const offset& rhs);
+	constexpr offset& operator-=(const offset& rhs);
+
+	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
+	constexpr offset& operator++();
+	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
+	constexpr offset  operator++(int);
+	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
+	constexpr offset& operator--();
+	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
+	constexpr offset  operator--(int);
+
+	constexpr offset  operator+() const noexcept;
+	constexpr offset  operator-() const;
+
+	constexpr offset& operator*=(value_type v);
+	constexpr offset& operator/=(value_type v);
+
+private:
+	std::array<value_type, rank> offset_ = {};
+};
 
 // offset equality
 template <size_t Rank>
@@ -26,6 +68,14 @@ template <size_t Rank>
 constexpr offset<Rank> operator*(ptrdiff_t v, const offset<Rank>& rhs);
 template <size_t Rank>
 constexpr offset<Rank> operator/(const offset<Rank>& lhs, ptrdiff_t v);
+
+*/
+
+namespace hummingbird
+{
+
+template <size_t Rank> class offset;
+
 
 // class template bounds
 template <size_t Rank> class bounds;
@@ -89,30 +139,51 @@ public:
 	static_assert(Rank > 0, "Size of Rank must be greater than 0");
 
 	// construction
-	constexpr offset() noexcept;
+	constexpr offset() noexcept {}
 	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
-	constexpr offset(value_type v) noexcept;
+	constexpr offset(value_type v) noexcept
+		{ offset_[0] = v; }
 	constexpr offset(std::initializer_list<value_type> il);
 
 	// element access
-	constexpr reference       operator[](size_type n);
-	constexpr const_reference operator[](size_type n) const;
+	constexpr reference       operator[](size_type n)
+	{
+		//static_assert(n < offset_.size(), "Requires n < Rank");
+	  	return offset_[n];
+	}
+	constexpr const_reference operator[](size_type n) const
+	{
+		//static_assert(n < offset_.size(), "Requires n < Rank");
+		return offset_[n];
+	}
 
 	// arithmetic
 	constexpr offset& operator+=(const offset& rhs);
 	constexpr offset& operator-=(const offset& rhs);
 
 	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
-	constexpr offset& operator++();
+	constexpr offset& operator++()
+		{ return ++offset_[0]; }
 	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
-	constexpr offset  operator++(int);
+	constexpr offset  operator++(int)
+		{ return offset<Rank>{offset_[0]++}; }
 	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
-	constexpr offset& operator--();
+	constexpr offset& operator--()
+		{ return --offset_[0]; }
 	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
-	constexpr offset  operator--(int);
+	constexpr offset  operator--(int)
+		{ return offset<Rank>{offset_[0]--}; }
 
-	constexpr offset  operator+() const noexcept;
-	constexpr offset  operator-() const;
+	constexpr offset  operator+() const noexcept
+		{ return *this; }
+	constexpr offset  operator-() const
+	{
+		offset<Rank> copy{*this};
+		for (auto& elem : offset_) {
+			elem *= -1;
+		}
+		return copy;
+	}
 
 	constexpr offset& operator*=(value_type v);
 	constexpr offset& operator/=(value_type v);
@@ -120,18 +191,6 @@ public:
 private:
 	std::array<value_type, rank> offset_ = {};
 };
-
-// construction
-template <size_t Rank>
-constexpr offset<Rank>::offset() noexcept {
-	//static_assert(Rank > 0, "Size of Rank must be greater than 0");
-}
-
-template <size_t Rank> template <size_t R, typename EnableIf>
-constexpr offset<Rank>::offset(value_type v) noexcept
-{
-	offset_[0] = v;
-}
 
 template <size_t Rank>
 constexpr offset<Rank>::offset(std::initializer_list<value_type> il)
@@ -143,21 +202,6 @@ constexpr offset<Rank>::offset(std::initializer_list<value_type> il)
 	for (size_type i=0; i<il.size(); ++i) {
 		offset_[i] = *(il.begin() + i);
 	}
-}
-
-// element access
-template <size_t Rank>
-constexpr ptrdiff_t& offset<Rank>::operator[](size_type n)
-{
-	//static_assert(n < offset_.size(), "Requires n < Rank");
-	return offset_[n];
-}
-
-template <size_t Rank>
-constexpr const ptrdiff_t& offset<Rank>::operator[](size_type n) const
-{
-	//static_assert(n < offset_.size(), "Requires n < Rank");
-	return offset_[n];
 }
 
 // arithmetic
@@ -179,46 +223,6 @@ constexpr offset<Rank>& offset<Rank>::operator-=(const offset& rhs)
 	return *this;
 }
 
-template <size_t Rank> template <size_t R, typename EnableIf>
-constexpr offset<Rank>& offset<Rank>::operator++()
-{
-	return ++offset_[0];
-}
-
-template <size_t Rank> template <size_t R, typename EnableIf>
-constexpr offset<Rank> offset<Rank>::operator++(int)
-{
-	return offset<Rank>{offset_[0]++};
-}
-
-template <size_t Rank> template <size_t R, typename EnableIf>
-constexpr offset<Rank>& offset<Rank>::operator--()
-{
-	return --offset_[0];
-}
-
-template <size_t Rank> template <size_t R, typename EnableIf>
-constexpr offset<Rank> offset<Rank>::operator--(int)
-{
-	return offset<Rank>{offset_[0]--};
-}
-
-template <size_t Rank>
-constexpr offset<Rank> offset<Rank>::operator+() const noexcept
-{
-	return *this;
-}
-
-template <size_t Rank>
-constexpr offset<Rank> offset<Rank>::operator-() const
-{
-	offset<Rank> copy{*this};
-	for (auto& elem : offset_) {
-		elem *= -1;
-	}
-	return copy;
-}
-
 template <size_t Rank>
 constexpr offset<Rank>& offset<Rank>::operator*=(value_type v)
 {
@@ -236,6 +240,7 @@ constexpr offset<Rank>& offset<Rank>::operator/=(value_type v)
 	}
 	return *this;
 }
+
 
 // Free functions
 
