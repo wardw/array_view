@@ -16,8 +16,7 @@ ostream& operator<<(ostream& os, const offset<Rank>& off)
 		os << "," << off[i];
 	}
 
-	os << ")";
-
+	return os << ")";
 }
 
 TEST(offset_test, Initialize)
@@ -50,4 +49,46 @@ TEST(bounds_test, size)
 {
 	bounds<3> b = {2,3,4};
 	EXPECT_EQ(24, b.size());
+}
+
+TEST(bounds_iterator_test, increment)
+{
+	bounds<3> b = {4,5,6};
+	bounds_iterator<3> iter{b};
+
+	for (int i=0; i<(4*5*6); i++)
+	{
+		cout << *iter++ << endl;
+	}
+	cout << "off-the-end: " << *iter << endl;
+	cout << "--off-the-end: " << *(--iter) << endl;
+}
+
+TEST(bounds_iterator_test, decrement)
+{
+	bounds<3> b = {4,5,6};
+	bounds_iterator<3> iter{b, {3,4,6}};  // off-the-end value
+
+	for (int i=0; i<(4*5*6); i++)
+	{
+		cout << *(--iter) << endl;
+	}
+	cout << "before-the-start: " << *(--iter) << endl;
+	cout << "++before-the-start" << *(++iter) << endl;
+}
+
+TEST(bounds_iterator_test, beginYend)
+{
+	bounds<3> b = {4,5,6};
+
+	bounds_iterator<3> iter = b.begin();
+	while (iter != b.end())
+	{
+		cout << *iter++ << endl;
+	}
+	cout << "off-the-end: " << *iter << endl;
+	cout << "--off-the-end: " << *(--iter) << endl;
+
+	EXPECT_EQ(b.begin(), begin(b));
+	EXPECT_EQ(b.end(), end(b));
 }
