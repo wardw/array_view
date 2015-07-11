@@ -4,6 +4,10 @@
 #include <initializer_list>
 #include <array>
 #include <iterator>
+#include <cassert>
+
+// temp
+#include <iostream>
 
 /*
 template <size_t Rank>
@@ -477,7 +481,7 @@ public:
 	static_assert(Rank > 0, "Size of Rank must be greater than 0");
 
 	bounds_iterator(const bounds<Rank> bounds, offset<Rank> off = offset<Rank>()) noexcept
-	 : bound_(bounds), offset_(off) {}
+	 : bounds_(bounds), offset_(off) {}
 
 	bool operator==(const bounds_iterator& rhs) const { 
 		// Requires *this and rhs are iterators over the same bounds object.
@@ -503,12 +507,15 @@ public:
 	reference operator*() const { return offset_; }
 	pointer   operator->() const { return &offset_; }
 
-	reference operator[](difference_type n) const;
+	reference operator[](difference_type n) const { 
+		bounds_iterator<Rank> iter(*this);
+		return (iter += n).offset_;
+	}
 
 	bounds_iterator& _setOffTheEnd();
 
 private:
-	bounds<Rank> bound_;
+	bounds<Rank> bounds_;
 	offset<Rank> offset_;
 };
 
@@ -523,7 +530,7 @@ private:
 // 			return;
 // 		}
 			
-// 		if (++offset_[dim] < bound_[dim]) {
+// 		if (++offset_[dim] < bounds_[dim]) {
 // 			return;
 // 		}
 // 		else {
@@ -550,7 +557,7 @@ bounds_iterator<Rank>& bounds_iterator<Rank>::operator++()
 	// watchit: dim must be signed in order to fail the condition dim>=0
 	for (int dim=(Rank-1); dim>=0; --dim)
 	{
-		if (++offset_[dim] < bound_[dim])
+		if (++offset_[dim] < bounds_[dim])
 			return (*this);
 		else
 			offset_[dim] = 0;
@@ -571,7 +578,7 @@ bounds_iterator<Rank>& bounds_iterator<Rank>::operator--()
 		if (--offset_[dim] >= 0)
 			return (*this);
 		else
-			offset_[dim] = bound_[dim]-1;
+			offset_[dim] = bounds_[dim]-1;
 	}
 	
 	// before-the-start value
@@ -594,11 +601,56 @@ template <size_t Rank>
 bounds_iterator<Rank>& bounds_iterator<Rank>::_setOffTheEnd()
 {
 	for (int dim=0; dim<Rank-1; ++dim) {
-		offset_[dim] = bound_[dim]-1;
+		offset_[dim] = bounds_[dim]-1;
 	}
-	offset_[Rank-1] = bound_[Rank-1];
+	offset_[Rank-1] = bounds_[Rank-1];
 
 	return *this;
+}
+
+template <size_t Rank>
+bounds_iterator<Rank>& bounds_iterator<Rank>::operator+=(difference_type n)
+{
+	for (int dim=(Rank-1); dim>=0; --dim)
+	{
+		difference_type remainder = (n + offset_[dim]) % bounds_[dim];
+		n = (n + offset_[dim]) / bounds_[dim];
+		offset_[dim] = remainder;
+	}
+	assert(n == 0);  // no overflow
+	return *this;
+}
+
+template <size_t Rank>
+bounds_iterator<Rank> bounds_iterator<Rank>::operator+(difference_type n) const
+{
+	bounds_iterator<Rank> iter(*this);
+	return iter += n;
+}
+
+template <size_t Rank>
+bounds_iterator<Rank>& bounds_iterator<Rank>::operator-=(difference_type n)
+{
+	// take (diminished) radix compliment 
+	auto diminishedRadixComplement = [&]() {
+		for (int dim=(Rank-1); dim>=0; --dim)
+		{
+			offset_[dim] = bounds_[dim] - offset_[dim];
+		}
+	};
+
+	diminishedRadixComplement();
+	*this += n;
+	diminishedRadixComplement();
+
+	return *this;
+}
+
+template <size_t Rank>
+bounds_iterator<Rank> bounds_iterator<Rank>::operator-(difference_type n) const
+{
+	bounds_iterator<Rank> iter(*this);
+	return iter -= n;
 }
 
 // Free functions

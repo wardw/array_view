@@ -92,3 +92,34 @@ TEST(bounds_iterator_test, beginYend)
 	EXPECT_EQ(b.begin(), begin(b));
 	EXPECT_EQ(b.end(), end(b));
 }
+
+TEST(bounds_iterator_test, difference)
+{
+	bounds<3> b = {4,5,9};
+	bounds_iterator<3> iter(b, {2,4,7});
+	iter += 25;
+
+	EXPECT_EQ(3, (*iter)[0]);
+	EXPECT_EQ(2, (*iter)[1]);
+	EXPECT_EQ(5, (*iter)[2]);
+
+	iter -= 25;
+	EXPECT_EQ(2, (*iter)[0]);
+	EXPECT_EQ(4, (*iter)[1]);
+	EXPECT_EQ(7, (*iter)[2]);
+
+	bounds_iterator<3> iter2 = iter + 25;
+	EXPECT_EQ(3, (*iter2)[0]);
+	EXPECT_EQ(2, (*iter2)[1]);
+	EXPECT_EQ(5, (*iter2)[2]);
+
+	bounds_iterator<3> iter3 = iter2 - 25;
+	EXPECT_EQ(2, (*iter3)[0]);
+	EXPECT_EQ(4, (*iter3)[1]);
+	EXPECT_EQ(7, (*iter3)[2]);
+
+	offset<3> off = iter3[25];
+	EXPECT_EQ(3, off[0]);
+	EXPECT_EQ(2, off[1]);
+	EXPECT_EQ(5, off[2]);
+}
