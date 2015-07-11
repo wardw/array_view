@@ -20,7 +20,7 @@ ostream& operator<<(ostream& os, const offset<Rank>& off)
 
 }
 
-TEST(array_view_test, Initialize)
+TEST(offset_test, Initialize)
 {
 	offset<4> off0;
 	EXPECT_EQ(0, off0[0]);
@@ -43,4 +43,11 @@ TEST(array_view_test, Initialize)
 	// todo
 	offset<2> off4 = {1,2,3};  // Should not compile: "Size of Rank must equal the size of the initialiser list"
 
+}
+
+
+TEST(bounds_test, size)
+{
+	bounds<3> b = {2,3,4};
+	EXPECT_EQ(24, b.size());
 }
