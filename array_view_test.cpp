@@ -129,11 +129,43 @@ TEST(array_view_test, constructors)
 	vector<int> vec(4*5*9);
 	std::generate_n(vec.begin(), 4*5*9, [&](){ static int curr{}; return curr++; });
 
-	array_view<int, 2> av(vec, {4,5,9});
+	array_view<int, 3> av(vec, {4,5,9});
 
 	int ans{};
-	for (bounds_iterator<2> iter = begin(av.bounds()); iter!=end(av.bounds()); ++iter)
+	for (bounds_iterator<3> iter = begin(av.bounds()); iter!=end(av.bounds()); ++iter)
 	{
 		EXPECT_EQ(ans++, av[*iter]);
 	}
+}
+
+TEST(array_view_test, slice)
+{
+	vector<int> vec(4*5*9);
+	std::generate_n(vec.begin(), 4*5*9, [&](){ static int curr{}; return curr++; });
+
+	array_view<int, 3> av(vec, {4,5,9});
+
+	int slice = 2;
+	array_view<int, 2> av2 = av[slice];
+
+	int ans{slice*5*9};
+	for (bounds_iterator<2> iter = begin(av2.bounds()); iter!=end(av2.bounds()); ++iter)
+	{
+		EXPECT_EQ(ans++, av2[*iter]);
+		//cout << av2[*iter] << endl;
+	}
+
+	// Cascade slices
+	int slice2 = 3;
+	array_view<int, 1> av3 = av[slice][slice2];
+
+	int ans2{slice*5*9 + slice2*9};
+	for (bounds_iterator<1> iter = begin(av3.bounds()); iter!=end(av3.bounds()); ++iter)
+	{
+		EXPECT_EQ(ans2++, av3[*iter]);
+		//cout << av3[*iter] << endl;
+	}
+
+	// Cascade to a single index
+	EXPECT_EQ(119, av[slice][slice2][2]);
 }

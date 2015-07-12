@@ -781,13 +781,28 @@ public:
  	{
 		assert(bounds().contains(idx) == true); 
 
-		size_t off{};
+		ptrdiff_t off{};
 		for (size_t i=0; i<rank; ++i)
 		{
 			off += idx[i] * stride_[i];
 		}		
 		return data_[off];
  	}
+
+ 	template <size_t R = Rank, typename = std::enable_if_t< R>=2 >>
+ 	constexpr array_view<T, Rank-1> operator[](ptrdiff_t slice) const
+  	{
+  		assert(0 <= slice && slice < bounds()[0]);
+
+  		hummingbird::bounds<Rank-1> bnd{};
+  		for (size_t i=0; i<rank-1; ++i) {
+  			bnd[i] = bounds_[i+1];
+  		}
+
+  		ptrdiff_t off = slice * stride_[0];
+
+  		return array_view<T, Rank-1>(data_+ off, bnd);
+  	}
 
 private:
 	pointer data_;
@@ -797,7 +812,7 @@ private:
 	constexpr void calc_stride()
 	{
 		stride_[rank-1] = 1;
-		for (int dim=rank-2; dim>=0; --dim)
+		for (int dim=static_cast<int>(rank)-2; dim>=0; --dim)
 		{
 			stride_[dim] = stride_[dim+1] * bounds()[dim + 1];
 		}
