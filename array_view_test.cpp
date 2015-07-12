@@ -123,3 +123,17 @@ TEST(bounds_iterator_test, difference)
 	EXPECT_EQ(2, off[1]);
 	EXPECT_EQ(5, off[2]);
 }
+
+TEST(array_view_test, constructors)
+{
+	vector<int> vec(4*5*9);
+	std::generate_n(vec.begin(), 4*5*9, [&](){ static int curr{}; return curr++; });
+
+	array_view<int, 2> av(vec, {4,5,9});
+
+	int ans{};
+	for (bounds_iterator<2> iter = begin(av.bounds()); iter!=end(av.bounds()); ++iter)
+	{
+		EXPECT_EQ(ans++, av[*iter]);
+	}
+}

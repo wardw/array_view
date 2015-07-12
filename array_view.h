@@ -684,4 +684,124 @@ bounds_iterator<Rank> operator+(typename bounds_iterator<Rank>::difference_type 
                                 const bounds_iterator<Rank>& rhs);
 
 
+template <typename Viewable, typename U, typename View = std::remove_reference_t<Viewable>>
+using is_viewable_on_u = std::integral_constant<bool, 
+		std::is_convertible<typename View::size_type, ptrdiff_t>::value &&
+		std::is_convertible<typename View::value_type*, std::add_pointer_t<U>>::value && 
+		std::is_same<std::remove_cv_t<typename View::value_type>, std::remove_cv_t<U>>::value
+		
+	>;
+
+// template <typename Viewable, ValueType, Pointer>
+// using is_viewable_on_u = std::integral_constant<bool, 
+// 		std::is_convertible<typename Viewable::size_type, ptrdiff_t>::value &&
+// 		std::is_convertible<typename Viewable::pointer, Pointer>::value && 
+// 		std::is_same<std::remove_cv_t<typename Viewable::value_type>, std::remove_cv_t<ValueType>>::value
+// 	>;
+
+template <typename T, typename U>
+using is_viewable_value = std::integral_constant<bool, 
+		std::is_convertible<std::add_pointer_t<T>, std::add_pointer_t<U>>::value && 
+		std::is_same<std::remove_cv_t<T>, std::remove_cv_t<U>>::value
+	>;
+
+
+template <typename T, size_t Rank>
+class array_view
+{
+public:
+	static constexpr size_t rank = Rank;
+	using offset_type = offset<Rank>;
+	using bounds_type = bounds<Rank>;
+	using size_type = size_t;
+	using value_type = T;
+	using pointer = T*;
+	using reference = T&;
+
+	static_assert(Rank > 0, "Size of Rank must be greater than 0");
+
+	constexpr array_view() noexcept : data_(nullptr) {} 
+
+	template <typename Viewable, size_t R = Rank, 
+	          typename = std::enable_if_t<R == 1 &&
+	                                      is_viewable_on_u<Viewable, value_type>::value
+	                                      // todo: && decay_t<Viewable> is not a specialization of array_view
+	                                     >
+	         >
+	constexpr array_view(Viewable&& vw) : data_(vw.data()), bounds_(vw.size()) {
+		// todo assert static_cast<U*>(vw.data()) points to contigious data
+		// of at least vw.size()
+		calc_stride();
+	}
+
+	template <typename U, size_t R = Rank,
+	          typename = std::enable_if_t<R == 1 &&
+	                                      //std::is_convertible<std::add_pointer_t<U>, pointer>::value && 
+		                                  //std::is_same<std::remove_cv_t<U>, std::remove_cv_t<value_type>>::value
+		                                  is_viewable_value<U, value_type>::value
+	                                     >
+	>
+  	constexpr array_view(const array_view<U, R>& rhs) noexcept
+  		: data_(rhs.data()), bounds_(rhs.bounds()) { calc_stride(); }
+
+	template <size_t Extent,
+	          typename = std::enable_if_t<Extent == 1> >
+	constexpr array_view(value_type (&arr)[Extent]) noexcept
+		: data_(arr), bounds_(Extent) { calc_stride(); }
+
+	template <typename U,
+	          typename = std::enable_if_t<is_viewable_value<U, value_type>::value
+	                                      //std::is_convertible<std::add_pointer_t<U>, pointer>::value && 
+		                                  //std::is_same<std::remove_cv_t<U>, std::remove_cv_t<value_type>>::value
+	                                     >
+	>
+ 	constexpr array_view(const array_view<U, Rank>& rhs) noexcept
+ 		: data_(rhs.data()), bounds_(rhs.bounds()) { calc_stride(); }
+
+ 	template <typename Viewable,
+ 	          typename = std::enable_if_t<is_viewable_on_u<Viewable, value_type>::value>
+ 	         >
+ 	constexpr array_view(Viewable&& vw, bounds_type bounds)
+ 		: data_(vw.data()), bounds_(bounds)
+	{
+		assert(bounds.size() <= vw.size());
+		calc_stride();
+	}
+
+ 	constexpr array_view(pointer ptr, bounds_type bounds)
+ 		: data_(ptr), bounds_(bounds) { calc_stride(); }
+
+ 	// observers
+ 	constexpr bounds_type bounds() const noexcept { return bounds_; }
+ 	constexpr size_type   size()   const noexcept { return bounds().size(); }
+ 	constexpr offset_type stride() const noexcept { return stride_; }
+ 	constexpr pointer     data()   const noexcept { return data_; }
+
+ 	constexpr reference operator[](const offset_type& idx) const
+ 	{
+		assert(bounds().contains(idx) == true); 
+
+		size_t off{};
+		for (size_t i=0; i<rank; ++i)
+		{
+			off += idx[i] * stride_[i];
+		}		
+		return data_[off];
+ 	}
+
+private:
+	pointer data_;
+	bounds_type bounds_;
+	offset_type stride_;
+
+	constexpr void calc_stride()
+	{
+		stride_[rank-1] = 1;
+		for (int dim=rank-2; dim>=0; --dim)
+		{
+			stride_[dim] = stride_[dim+1] * bounds()[dim + 1];
+		}
+	}
+};
+
 }
