@@ -731,7 +731,6 @@ public:
 	constexpr array_view(Viewable&& vw) : data_(vw.data()), bounds_(vw.size()) {
 		// todo assert static_cast<U*>(vw.data()) points to contigious data
 		// of at least vw.size()
-		calc_stride();
 	}
 
 	template <typename U, size_t R = Rank,
@@ -742,12 +741,12 @@ public:
 	                                     >
 	>
   	constexpr array_view(const array_view<U, R>& rhs) noexcept
-  		: data_(rhs.data()), bounds_(rhs.bounds()) { calc_stride(); }
+  		: data_(rhs.data()), bounds_(rhs.bounds()) {}
 
 	template <size_t Extent,
 	          typename = std::enable_if_t<Extent == 1> >
 	constexpr array_view(value_type (&arr)[Extent]) noexcept
-		: data_(arr), bounds_(Extent) { calc_stride(); }
+		: data_(arr), bounds_(Extent) {}
 
 	template <typename U,
 	          typename = std::enable_if_t<is_viewable_value<U, value_type>::value
@@ -756,7 +755,7 @@ public:
 	                                     >
 	>
  	constexpr array_view(const array_view<U, Rank>& rhs) noexcept
- 		: data_(rhs.data()), bounds_(rhs.bounds()) { calc_stride(); }
+ 		: data_(rhs.data()), bounds_(rhs.bounds()) {}
 
  	template <typename Viewable,
  	          typename = std::enable_if_t<is_viewable_on_u<Viewable, value_type>::value>
@@ -765,16 +764,15 @@ public:
  		: data_(vw.data()), bounds_(bounds)
 	{
 		assert(bounds.size() <= vw.size());
-		calc_stride();
 	}
 
  	constexpr array_view(pointer ptr, bounds_type bounds)
- 		: data_(ptr), bounds_(bounds) { calc_stride(); }
+ 		: data_(ptr), bounds_(bounds) {}
 
  	// observers
  	constexpr bounds_type bounds() const noexcept { return bounds_; }
  	constexpr size_type   size()   const noexcept { return bounds().size(); }
- 	constexpr offset_type stride() const noexcept { return stride_; }
+ 	constexpr offset_type stride() const noexcept;// { return stride_; }
  	constexpr pointer     data()   const noexcept { return data_; }
 
  	constexpr reference operator[](const offset_type& idx) const
@@ -784,7 +782,7 @@ public:
 		ptrdiff_t off{};
 		for (size_t i=0; i<rank; ++i)
 		{
-			off += idx[i] * stride_[i];
+			off += idx[i] * stride()[i];
 		}		
 		return data_[off];
  	}
@@ -799,7 +797,7 @@ public:
   			bnd[i] = bounds_[i+1];
   		}
 
-  		ptrdiff_t off = slice * stride_[0];
+  		ptrdiff_t off = slice * stride()[0];
 
   		return array_view<T, Rank-1>(data_+ off, bnd);
   	}
@@ -807,16 +805,18 @@ public:
 private:
 	pointer data_;
 	bounds_type bounds_;
-	offset_type stride_;
-
-	constexpr void calc_stride()
-	{
-		stride_[rank-1] = 1;
-		for (int dim=static_cast<int>(rank)-2; dim>=0; --dim)
-		{
-			stride_[dim] = stride_[dim+1] * bounds()[dim + 1];
-		}
-	}
 };
+
+template <typename T, size_t Rank>
+constexpr typename array_view<T,Rank>::offset_type array_view<T,Rank>::stride() const noexcept
+{
+	offset_type stride{};
+	stride[rank-1] = 1;
+	for (int dim=static_cast<int>(rank)-2; dim>=0; --dim)
+	{
+		stride[dim] = stride[dim+1] * bounds()[dim + 1];
+	}
+	return stride;
+}
 
 }
