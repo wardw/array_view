@@ -145,10 +145,10 @@ namespace hummingbird
 {
 
 template <size_t Rank> class offset;
-
 template <size_t Rank> class bounds;
-
 template <size_t Rank> class bounds_iterator;
+template <typename T, size_t Rank> class array_view;
+template <typename T, size_t Rank> class strided_array_view;
 
 template <size_t Rank>
 class offset
@@ -206,11 +206,7 @@ private:
 template <size_t Rank>
 constexpr offset<Rank>::offset(std::initializer_list<value_type> il)
 {
-	// Todo: fails, try gcc?
-	//static_assert(il.size() == Rank, "Size of Rank must equal the size of the initialiser list");
-	for (size_type i=0; i<il.size(); ++i) {
-		(*this)[i] = *(il.begin() + i);
-	}
+	std::copy(il.begin(), il.end(), offset_.data());
 }
 
 // arithmetic
@@ -345,9 +341,8 @@ constexpr bounds<Rank>::bounds(std::initializer_list<value_type> il)
 {
 	// Todo: fails, try gcc?
 	//static_assert(il.size() == Rank, "Size of Rank must equal the size of the initialiser list");
-	for (size_type i=0; i<il.size(); ++i) {
-		(*this)[i] = *(il.begin() + i);
-	}
+
+	std::copy(il.begin(), il.end(), bounds_.data());
 	postcondition();
 }
 
@@ -683,40 +678,53 @@ template <size_t Rank>
 bounds_iterator<Rank> operator+(typename bounds_iterator<Rank>::difference_type n,
                                 const bounds_iterator<Rank>& rhs);
 
+namespace {
 
-template <typename Viewable, typename U, typename View = std::remove_reference_t<Viewable>>
-using is_viewable_on_u = std::integral_constant<bool, 
-		std::is_convertible<typename View::size_type, ptrdiff_t>::value &&
-		std::is_convertible<typename View::value_type*, std::add_pointer_t<U>>::value && 
-		std::is_same<std::remove_cv_t<typename View::value_type>, std::remove_cv_t<U>>::value
-		
-	>;
+	template <typename Viewable, typename U, typename View = std::remove_reference_t<Viewable>>
+	using is_viewable_on_u = std::integral_constant<bool,
+			std::is_convertible<typename View::size_type, ptrdiff_t>::value &&
+			std::is_convertible<typename View::value_type*, std::add_pointer_t<U>>::value &&
+			std::is_same<std::remove_cv_t<typename View::value_type>, std::remove_cv_t<U>>::value
 
-// template <typename Viewable, ValueType, Pointer>
-// using is_viewable_on_u = std::integral_constant<bool, 
-// 		std::is_convertible<typename Viewable::size_type, ptrdiff_t>::value &&
-// 		std::is_convertible<typename Viewable::pointer, Pointer>::value && 
-// 		std::is_same<std::remove_cv_t<typename Viewable::value_type>, std::remove_cv_t<ValueType>>::value
-// 	>;
+		>;
 
-template <typename T, typename U>
-using is_viewable_value = std::integral_constant<bool, 
-		std::is_convertible<std::add_pointer_t<T>, std::add_pointer_t<U>>::value && 
-		std::is_same<std::remove_cv_t<T>, std::remove_cv_t<U>>::value
-	>;
+	// template <typename Viewable, ValueType, Pointer>
+	// using is_viewable_on_u = std::integral_constant<bool,
+	// 		std::is_convertible<typename Viewable::size_type, ptrdiff_t>::value &&
+	// 		std::is_convertible<typename Viewable::pointer, Pointer>::value &&
+	// 		std::is_same<std::remove_cv_t<typename Viewable::value_type>, std::remove_cv_t<ValueType>>::value
+	// 	>;
 
+	template <typename T, typename U>
+	using is_viewable_value = std::integral_constant<bool,
+			std::is_convertible<std::add_pointer_t<T>, std::add_pointer_t<U>>::value &&
+			std::is_same<std::remove_cv_t<T>, std::remove_cv_t<U>>::value
+		>;
 
-template <typename T, size_t Rank>
+	template <typename T, size_t Rank>
+	constexpr T& view_access(T* data, const offset<Rank>& idx, const offset<Rank>& stride)
+	{
+		ptrdiff_t off{};
+		for (size_t i=0; i<Rank; ++i)
+		{
+			off += idx[i] * stride[i];
+		}
+		return data[off];
+	}
+
+} // namespace
+
+template <typename T, size_t Rank = 1>
 class array_view
 {
 public:
 	static constexpr size_t rank = Rank;
-	using offset_type = offset<Rank>;
-	using bounds_type = bounds<Rank>;
-	using size_type = size_t;
-	using value_type = T;
-	using pointer = T*;
-	using reference = T&;
+	using offset_type            = offset<Rank>;
+	using bounds_type            = bounds<Rank>;
+	using size_type              = size_t;
+	using value_type             = T;
+	using pointer                = T*;
+	using reference              = T&;
 
 	static_assert(Rank > 0, "Size of Rank must be greater than 0");
 
@@ -778,29 +786,40 @@ public:
  	constexpr reference operator[](const offset_type& idx) const
  	{
 		assert(bounds().contains(idx) == true); 
-
-		ptrdiff_t off{};
-		for (size_t i=0; i<rank; ++i)
-		{
-			off += idx[i] * stride()[i];
-		}		
-		return data_[off];
+		return view_access(data_, idx, stride());
  	}
 
+	// slicing and sectioning
  	template <size_t R = Rank, typename = std::enable_if_t< R>=2 >>
  	constexpr array_view<T, Rank-1> operator[](ptrdiff_t slice) const
   	{
   		assert(0 <= slice && slice < bounds()[0]);
 
-  		hummingbird::bounds<Rank-1> bnd{};
+  		hummingbird::bounds<Rank-1> new_bounds{};
   		for (size_t i=0; i<rank-1; ++i) {
-  			bnd[i] = bounds_[i+1];
+  			new_bounds[i] = bounds()[i+1];
   		}
 
   		ptrdiff_t off = slice * stride()[0];
 
-  		return array_view<T, Rank-1>(data_+ off, bnd);
+  		return array_view<T, Rank-1>(data_ + off, new_bounds);
   	}
+
+  	constexpr strided_array_view<T, Rank>
+  	section(const offset_type& origin, const bounds_type& section_bounds) const
+  	{
+		// todo: requirement is for any idx in section_bounds (boundary fail)
+  		//assert(bounds().contains(origin + section_bounds) == true);
+  		return strided_array_view<T, Rank>(&(*this)[origin], section_bounds, stride());
+  	}
+
+  	constexpr strided_array_view<T, Rank>
+  	section(const offset_type& origin) const
+  	{
+  		// todo: requires checking for any idx in bounds() - origin
+		// assert(bounds().contains(bounds()) == true);
+  		return strided_array_view<T, Rank>(&(*this)[origin], bounds() - origin, stride());
+   	}
 
 private:
 	pointer data_;
@@ -818,5 +837,92 @@ constexpr typename array_view<T,Rank>::offset_type array_view<T,Rank>::stride() 
 	}
 	return stride;
 }
+
+template <class T, size_t Rank = 1>
+class strided_array_view
+{
+public:
+	// constants and types
+	static constexpr size_t rank = Rank;
+	using offset_type            = offset<Rank>;
+	using bounds_type            = bounds<Rank>;
+	using size_type              = size_t;
+	using value_type             = T;
+	using pointer                = T*;
+	using reference              = T&;
+
+	// constructors, copy, and assignment
+	constexpr strided_array_view() noexcept
+		: data_{nullptr}, bounds_{}, stride_{} {}
+
+	template <typename U, typename = std::enable_if_t<is_viewable_value<U, value_type>::value>>
+	constexpr strided_array_view(const array_view<U, Rank>& rhs) noexcept
+		: data_{rhs.data()}, bounds_{rhs.bounds()}, stride_{rhs.stride()} {}
+	template <typename U, typename = std::enable_if_t<is_viewable_value<U, value_type>::value>>
+	constexpr strided_array_view(const strided_array_view<U, Rank>& rhs) noexcept
+		: data_{rhs.data_}, bounds_{rhs.bounds()}, stride_{rhs.stride()} {}
+
+	constexpr strided_array_view(pointer ptr, bounds_type bounds, offset_type stride)
+		: data_(ptr), bounds_(bounds), stride_(stride)
+	{
+		// assert that sum(idx[i] * stride[i]) fits in ptrdiff_t
+	}
+
+	// observers
+	constexpr bounds_type bounds() const noexcept { return bounds_; }
+	constexpr size_type   size()   const noexcept { return bounds_.size(); }
+	constexpr offset_type stride() const noexcept { return stride_; }
+
+	// element access
+	constexpr reference operator[](const offset_type& idx) const
+	{
+		assert(bounds().contains(idx) == true);
+		return view_access(data_, idx, stride_);
+	}
+
+	// slicing and sectioning
+ 	template <size_t R = Rank, typename = std::enable_if_t< R>=2 >>
+	constexpr strided_array_view<T, Rank-1> operator[](ptrdiff_t slice) const
+	{
+		assert(0 <= slice && slice < bounds()[0]);
+
+  		hummingbird::bounds<Rank-1> new_bounds{};
+  		for (size_t i=0; i<rank-1; ++i) {
+  			new_bounds[i] = bounds()[i+1];
+  		}
+
+  		hummingbird::offset<Rank-1> new_stride{};
+  		for (size_t i=0; i<rank-1; ++i) {
+  			new_stride[i] = stride()[i+1];
+  		}
+
+  		ptrdiff_t off = slice * stride()[0];
+
+  		return strided_array_view<T, Rank-1>(data_ + off, new_bounds, new_stride);
+	}
+
+	constexpr strided_array_view<T, Rank>
+	section(const offset_type& origin, const bounds_type& section_bounds) const
+	{
+		// todo: requirement is for any idx in section_bounds (boundary fail)
+		//assert(bounds().contains(origin + section_bounds) == true);
+  		return strided_array_view<T, Rank>(&(*this)[origin], section_bounds, stride());
+	}
+
+	constexpr strided_array_view<T, Rank>
+	section(const offset_type& origin) const
+	{
+		// todo: requires checking for any idx in bounds() - origin
+		// assert(bounds().contains(bounds()) == true);
+  		return strided_array_view<T, Rank>(&(*this)[origin], bounds() - origin, stride());
+	}
+
+private:
+	pointer     data_;
+	bounds_type bounds_;
+	offset_type stride_;
+};
+
+
 
 }

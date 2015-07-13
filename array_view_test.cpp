@@ -124,48 +124,282 @@ TEST(bounds_iterator_test, difference)
 	EXPECT_EQ(5, off[2]);
 }
 
-TEST(array_view_test, constructors)
+class ArrayViewTest : public ::testing::Test {
+public:
+	ArrayViewTest() : vec(4*5*9), av(vec, {4,5,9}) {}
+protected:
+	virtual void SetUp()
+	{
+		int n{};
+		std::generate(vec.begin(), vec.end(), [&]{ return n++; });
+	}
+
+	vector<int> vec;
+	array_view<int, 3> av;
+};
+
+TEST_F(ArrayViewTest, Constructors)
 {
-	vector<int> vec(4*5*9);
-	std::generate_n(vec.begin(), 4*5*9, [&](){ static int curr{}; return curr++; });
-
-	array_view<int, 3> av(vec, {4,5,9});
-
-	int ans{};
+	int start{};
 	for (bounds_iterator<3> iter = begin(av.bounds()); iter!=end(av.bounds()); ++iter)
 	{
-		EXPECT_EQ(ans++, av[*iter]);
+		EXPECT_EQ(start++, av[*iter]);
 	}
 }
 
-TEST(array_view_test, slice)
+TEST_F(ArrayViewTest, Observers)
 {
-	vector<int> vec(4*5*9);
-	std::generate_n(vec.begin(), 4*5*9, [&](){ static int curr{}; return curr++; });
 
-	array_view<int, 3> av(vec, {4,5,9});
+}
 
-	int slice = 2;
-	array_view<int, 2> av2 = av[slice];
-
-	int ans{slice*5*9};
-	for (bounds_iterator<2> iter = begin(av2.bounds()); iter!=end(av2.bounds()); ++iter)
+TEST_F(ArrayViewTest, Slicing)
+{
+	// Slices always act on the most significant dimension
+	int x = 2;
+	array_view<int, 2> sliced = av[x];
+	int start{9*5*x};
+	for (bounds_iterator<2> iter = begin(sliced.bounds()); iter!=end(sliced.bounds()); ++iter)
 	{
-		EXPECT_EQ(ans++, av2[*iter]);
-		//cout << av2[*iter] << endl;
+		EXPECT_EQ(start++, sliced[*iter]);
 	}
 
 	// Cascade slices
-	int slice2 = 3;
-	array_view<int, 1> av3 = av[slice][slice2];
-
-	int ans2{slice*5*9 + slice2*9};
-	for (bounds_iterator<1> iter = begin(av3.bounds()); iter!=end(av3.bounds()); ++iter)
+	int y = 3;
+	array_view<int, 1> sliced2 = av[x][y];
+	int start2{9*5*x + 9*y};
+	for (bounds_iterator<1> iter = begin(sliced2.bounds()); iter!=end(sliced2.bounds()); ++iter)
 	{
-		EXPECT_EQ(ans2++, av3[*iter]);
-		//cout << av3[*iter] << endl;
+		EXPECT_EQ(start2++, sliced2[*iter]);
 	}
 
 	// Cascade to a single index
-	EXPECT_EQ(119, av[slice][slice2][2]);
+	int z = 2;
+	EXPECT_EQ(9*5*x + 9*y + z, av[x][y][z]);
+}
+
+TEST_F(ArrayViewTest, Sectioning)
+{
+	offset<3> origin{1,2,3};
+
+	// with new bounds
+	bounds<3> newBounds{2,3,4};
+	strided_array_view<int, 3> section = av.section(origin, newBounds);
+
+	int start = 9*5*origin[0] + 9*origin[1] + origin[2];
+	for (bounds_iterator<3> iter = begin(section.bounds()); iter!=end(section.bounds()); ++iter)
+	{
+		offset<3> idx = *iter;
+		int ans = start + 9*5*idx[0] + 9*idx[1] + idx[2];
+		EXPECT_EQ(ans, section[*iter]);
+	}
+
+	// with bounds extending to extent of source view
+	strided_array_view<int, 3> section2 = av.section(origin);
+	EXPECT_EQ(av.bounds() - origin, section2.bounds());
+
+	int start2 = 9*5*origin[0] + 9*origin[1] + origin[2];
+	for (bounds_iterator<3> iter = begin(section2.bounds()); iter!=end(section2.bounds()); ++iter)
+	{
+		offset<3> idx = *iter;
+		int ans = start2 + 9*5*idx[0] + 9*idx[1] + idx[2];
+		EXPECT_EQ(ans, section2[*iter]);
+	}
+}
+
+class StridedArrayViewTest : public ::testing::Test {
+public:
+	StridedArrayViewTest() : vec(4*8*12), av(vec, {4,8,12}) {}
+protected:
+	virtual void SetUp()
+	{
+		int n{};
+		std::generate(vec.begin(), vec.end(), [&]{ return n++; });
+	}
+
+	vector<int> vec;
+	array_view<int, 3> av;
+};
+
+TEST_F(StridedArrayViewTest, Constructors)
+{
+	// Default
+	strided_array_view<int, 3> sav{};
+	EXPECT_EQ(0, sav.size());
+
+	// From array_view
+	strided_array_view<int, 3> sav2(av);
+	int ans{};
+	for (bounds_iterator<3> iter = begin(sav2.bounds()); iter!=end(sav2.bounds()); ++iter) {
+		EXPECT_EQ(ans++, sav2[*iter]);
+	}
+
+	// From strided_array_view
+	strided_array_view<int, 3> sav3(sav2);
+	int ans2{};
+	for (bounds_iterator<3> iter = begin(sav3.bounds()); iter!=end(sav3.bounds()); ++iter) {
+		EXPECT_EQ(ans2++, sav3[*iter]);
+	}
+
+}
+
+TEST_F(StridedArrayViewTest, Observers)
+{
+	// strided_array_view class, but from av contigious data
+	strided_array_view<int, 3> sav(av);
+
+	bounds<3> bounds = {4,8,12};
+	EXPECT_EQ(sav.bounds(), bounds);
+
+	EXPECT_EQ(sav.size(), 4*8*12);
+
+	offset<3> stride = {12*8, 12, 1};
+	EXPECT_EQ(sav.stride(), stride);
+}
+
+TEST_F(StridedArrayViewTest, Slicing)
+{
+	strided_array_view<int, 3> sav(av);
+
+	// Slices always act on the most significant dimension
+	int x = 2;
+	strided_array_view<int, 2> sliced = sav[x];
+	int start{12*8*x};
+	for (bounds_iterator<2> iter = begin(sliced.bounds()); iter!=end(sliced.bounds()); ++iter)
+	{
+		EXPECT_EQ(start++, sliced[*iter]);
+	}
+
+	// Cascade slices
+	int y = 3;
+	strided_array_view<int, 1> sliced2 = sav[x][y];
+
+	int start2{12*8*x + 12*y};
+	for (bounds_iterator<1> iter = begin(sliced2.bounds()); iter!=end(sliced2.bounds()); ++iter)
+	{
+		EXPECT_EQ(start2++, sliced2[*iter]);
+	}
+
+	// Cascade to a single index
+	int z = 7;
+	EXPECT_EQ(12*8*x + 12*y + z, sav[x][y][z]);
+}
+
+TEST_F(StridedArrayViewTest, Sectioning)
+{
+	strided_array_view<int, 3> sav(av);
+
+	offset<3> origin{1,2,3};
+
+	// with new bounds
+	bounds<3> newBounds{2,3,4};
+	strided_array_view<int, 3> section = sav.section(origin, newBounds);
+
+	int start = 12*8*origin[0] + 12*origin[1] + origin[2];
+	for (bounds_iterator<3> iter = begin(section.bounds()); iter!=end(section.bounds()); ++iter)
+	{
+		offset<3> idx = *iter;
+		int ans = start + 12*8*idx[0] + 12*idx[1] + idx[2];
+		EXPECT_EQ(ans, section[*iter]);
+	}
+
+	// with bounds extending to extent of source view
+	strided_array_view<int, 3> section2 = sav.section(origin);
+	EXPECT_EQ(sav.bounds() - origin, section2.bounds());
+
+	int start2 = 12*8*origin[0] + 12*origin[1] + origin[2];
+	for (bounds_iterator<3> iter = begin(section2.bounds()); iter!=end(section2.bounds()); ++iter)
+	{
+		offset<3> idx = *iter;
+		int ans = start2 + 12*8*idx[0] + 12*idx[1] + idx[2];
+		EXPECT_EQ(ans, section2[*iter]);
+	}
+}
+
+using StridedDataTest = StridedArrayViewTest;
+
+TEST_F(StridedDataTest, Constructors)
+{
+	// From strided data (even's only)
+	strided_array_view<int, 3> strided_sav(vec.data(), {4,8,6}, {12*8, 12, 2});
+
+	int start{};
+	for (bounds_iterator<3> iter = begin(strided_sav.bounds()); iter!=end(strided_sav.bounds()); ++iter) {
+		EXPECT_EQ(start, strided_sav[*iter]);
+		start += 2;
+	}
+}
+
+TEST_F(StridedDataTest, Observers)
+{
+	// strided data (even's only)
+	strided_array_view<int, 3> sav(vec.data(), {4,8,6}, {12*8, 12, 2});
+
+	bounds<3> bounds = {4,8,6};
+	EXPECT_EQ(sav.bounds(), bounds);
+
+	EXPECT_EQ(sav.size(), 4*8*6);
+
+	offset<3> stride = {12*8, 12, 2};
+	EXPECT_EQ(sav.stride(), stride);
+}
+
+TEST_F(StridedDataTest, Slicing)
+{
+	strided_array_view<int, 3> sav(vec.data(), {4,8,6}, {12*8, 12, 2});
+
+	// Slices always act on the most significant dimension
+	int x = 2;
+	strided_array_view<int, 2> sliced = sav[x];
+	int start{12*8*x};
+	for (bounds_iterator<2> iter = begin(sliced.bounds()); iter!=end(sliced.bounds()); ++iter)
+	{
+		EXPECT_EQ(start, sliced[*iter]);
+		start += 2;
+	}
+
+	// Cascade slices
+	int y = 3;
+	strided_array_view<int, 1> sliced2 = sav[x][y];
+
+	int start2{12*8*x + 12*y};
+	for (bounds_iterator<1> iter = begin(sliced2.bounds()); iter!=end(sliced2.bounds()); ++iter)
+	{
+		EXPECT_EQ(start2, sliced2[*iter]);
+		start2 += 2;
+	}
+
+	// Cascade to a single index
+	int z = 3;
+	EXPECT_EQ(12*8*x + 12*y + 2*z, sav[x][y][z]);
+}
+
+TEST_F(StridedDataTest, Sectioning)
+{
+	strided_array_view<int, 3> sav(vec.data(), {4,8,6}, {12*8, 12, 2});
+
+	offset<3> origin{1,2,3};
+
+	// with new bounds
+	bounds<3> newBounds{2,3,4};
+	strided_array_view<int, 3> section = sav.section(origin, newBounds);
+
+	int start = 12*8*origin[0] + 12*origin[1] + origin[2]*2;
+	for (bounds_iterator<3> iter = begin(section.bounds()); iter!=end(section.bounds()); ++iter)
+	{
+		offset<3> idx = *iter;
+		int ans = start + 12*8*idx[0] + 12*idx[1] + idx[2]*2;
+		EXPECT_EQ(ans, section[*iter]);
+	}
+
+	// with bounds extending to extent of source view
+	strided_array_view<int, 3> section2 = sav.section(origin);
+	EXPECT_EQ(sav.bounds() - origin, section2.bounds());
+
+	int start2 = 12*8*origin[0] + 12*origin[1] + origin[2]*2;
+	for (bounds_iterator<3> iter = begin(section2.bounds()); iter!=end(section2.bounds()); ++iter)
+	{
+		offset<3> idx = *iter;
+		int ans = start2 + 12*8*idx[0] + 12*idx[1] + idx[2]*2;
+		EXPECT_EQ(ans, section2[*iter]);
+	}
 }
