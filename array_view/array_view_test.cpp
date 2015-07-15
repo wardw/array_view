@@ -1,4 +1,4 @@
-#include "hummingbird/solve/array_view.h"
+#include "array_view/array_view.h"
 
 #include <iostream>
 #include "gtest/gtest.h"
