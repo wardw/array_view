@@ -1,6 +1,7 @@
 #include "array_view/array_view.h"
 
 #include <iostream>
+#include <numeric>
 #include "gtest/gtest.h"
 
 using namespace std;
@@ -202,7 +203,7 @@ void testSectioning(const ArrayView& av, const bounds<3>& testBounds,
 template <typename ArrayView>
 void testSlicing(const ArrayView& av, const offset<3>& testStride)
 {
-	// Slices always act on the most significant dimension
+	// Slices always fix the most significant dimension
 	int x = 2;
 	strided_array_view<int, 2> sliced = av[x];
 	int start = testStride[0] * x;
@@ -351,3 +352,67 @@ TEST_F(StridedDataTest, Sectioning)
 	testSectioning(sectioned, remainingBounds, origin, testStride);
 }
 
+TEST(ArrayView, Example)
+{
+	int X = 12;
+	int Y = 8;
+	int Z = 6;
+
+	vector<int> vec(X*Y*Z);
+
+	bounds<3> extents = {X,Y,Z};
+	array_view<int,3> av(vec, extents);
+
+	// Access an element.
+	offset<3> idx = {5,3,2};
+	av[idx] = 30;
+
+	// Iterate through each index of the view
+	for (auto& idx : av.bounds())
+	{
+		auto i = idx[0];
+		auto j = idx[1];
+		auto k = idx[2];
+		av[idx] = i * j * k;
+	}
+
+	// or use a bounds_iterator explicitly
+	bounds_iterator<3> first = begin(av.bounds());
+	bounds_iterator<3> last = end(av.bounds());
+
+	for_each(first, last, [&av](const offset<3>& idx) {
+		auto i = idx[0];
+		auto j = idx[1];
+		auto k = idx[2];
+		EXPECT_EQ(i * j * k, av[idx]);
+	});
+
+	// Slicing
+	int x0 = 5;
+	int y0 = 3;
+	array_view<int, 2> slice2d = av[x0];      // a 2d slice in the yz plane
+	array_view<int, 1> slice1d = av[x0][y0];  // a row in z (also the contigious dimension)
+
+	EXPECT_EQ(30, ( slice2d[{3,2}] ));
+	EXPECT_EQ(30, slice1d[2]);
+
+	// Sectioning
+	offset<3> origin = {6, 3, 2};
+	bounds<3> window = {3, 3, 2};
+	auto section = av.section(origin, window);
+
+	int sum = std::accumulate(begin(section.bounds()), end(section.bounds()), 0,
+	                          [&](int a, offset<3> idx) {
+		return a + section[idx];
+	});
+
+    // Strided data
+	offset<3> newStride = {av.stride()[0], av.stride()[1], 3};
+	bounds<3> newExtents = {X, Y, Z/3};
+	strided_array_view<int,3> sav(vec.data(), newExtents, newStride);
+
+	for (auto& idx : sav.bounds())
+	{
+		EXPECT_EQ(0, sav[idx] % 3);
+	}
+}
