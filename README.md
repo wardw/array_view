@@ -1,10 +1,8 @@
-An implementation of the C++17 proposal for multidimensional arrays and indexing
-
 A working implementation of the ISO C++ proposal ["Multidimensional bounds, offset and array_view"][1] by Reis, Laksberg and Gor Nishanov.
 
-The key idea behind the proposal is the representation of a multidimensional array as a view over serially contigious or strided data and the straightforward expression for multidimensional indexing into these arrays. Among other things this allows for iterating over such arrays in a way that works naturally with existing algorithms.
+Two key ideas behind the proposal are the representation of a multidimensional array as a view over contiguous (or strided) data, and the straightforward expression for multidimensional indexing into these arrays. This allows for iterating over such arrays in a way that works naturally with existing algorithms, among other things.
 
-More details can be found in the [original proposal][1] and later revisions (this work as of [revision 7][3]). Or see the examples in the tests.  If you want to build the tests there is a CMakeLists.txt for building with CMake and Google Test.
+More details can be found in the [original proposal][1] and later revisions (this work as of [revision 7][3]).  Alternatively, see the examples in the tests. To build the tests there is a CMakeLists.txt for building with CMake and Google Test.
 
 ### A very quick overview
 
@@ -14,19 +12,19 @@ More details can be found in the [original proposal][1] and later revisions (thi
 
 	vector<int> vec(X*Y*Z);
 
-An `offset` represents a multidimensional index, effectively representing an integral vector into our multidimensional array space. A `bounds` defines the extents of this array space, and has a similar interface to `offset`. An `array_view` is our view, typically on a container but in general for data with the one requiement that the data is layed out contigiously in memory. A view has reference semantics, so our `vec` must stay in scope.
-
 	bounds<3> extents = {X,Y,Z};
 	array_view<int,3> av(vec, extents);
 
-Access an element
+A `bounds` defines the extents of an array space from which we wish to create a view. An `array_view` is our multidimensional view onto our vector, or indeed over any data laid out contiguously in memory (with the single alternative `strided_array_view` admitting data of an regular stride). A view has reference semantics, so our `vec` must stay valid for the lifetime of `av`.
+
+An `offset` represents a multidimensional index, effectively representing an integral vector into this multidimensional array space. `offset` and `bounds` share similar interfaces. To access an element
 
 	offset<3> idx = {5,3,2};
-	av[idx] = 30;
-	..
-	av[{5,3,2}] = 30;  // neat
 
-Iterate through each index of the view
+	av[idx] = 30;
+	av[{5,3,2}] = 30;  // also fine
+
+The `bounds` class provides `begin` and `end` members to iterators that iterate over each index of the bounds, allowing iteration with a simple range-based for loop
 
 	for (auto& idx : av.bounds())
 	{
@@ -36,13 +34,13 @@ Iterate through each index of the view
 		av[idx] = i * j * k;
 	}
 
-or use `bounds_iterator` explicitly. A `bounds_iterator` is a (almost) random access iterator whose `value_type` is an `offset` into the array space. Iterating a `bounds_iterator` is typically done over the range defined by `bounds`.
+Alternatively, you can construct a `bounds_iterator` directly. A `bounds_iterator` is a (nearly) random access iterator whose `value_type` is an `offset` into the array space. Iterating a `bounds_iterator` is typically done over the range defined by `bounds`.
 
 	bounds_iterator<3> first = begin(av.bounds());
 	bounds_iterator<3> last = end(av.bounds());
 
-	for_each(first, last, [&av](offset<3>& idx) {
-        // dereferencing an iterator returns a const offset<Rank>
+    // Dereferencing an iterator returns a `const offset<Rank>`. Indices are always immutable.
+	for_each(first, last, [&av](const offset<3>& idx) {
 		auto i = idx[0];
 		auto j = idx[1];
 		auto k = idx[2];
@@ -51,14 +49,13 @@ or use `bounds_iterator` explicitly. A `bounds_iterator` is a (almost) random ac
 
 #### Slicing
 
-Slicing takes a lower dimensional 'slice' as a new view. Slices `[]` always fix the most significant dimension (here `x`)
+Slicing returns a lower dimensional 'slice' as a new view. Slices always fix the most significant dimension (here, `x`)
 
-	int x0 = 5;
-	int y0 = 3;
+	int x0 = 5, y0 = 3;
 	array_view<int, 2> slice2d = av[x0];      // a 2d slice in the yz plane
-	array_view<int, 1> slice1d = av[x0][y0];  // a row in z, also the contigious dimension
+	array_view<int, 1> slice1d = av[x0][y0];  // a row in z, also the contiguous dimension
 
-	assert(( slice2d[{3,2}] == 30 ));
+	assert( slice2d[{3,2}] == 30 );
 
 For dimensions of rank 1, you can omit the `initializer_list`
 
@@ -72,7 +69,7 @@ Sectioning creates a new view of the data given a new set of bounds that fully s
 	bounds<3> window = {3, 3, 2};
 	auto section = av.section(origin, window);
 
-    // work just with this section of the data
+    // Work just with this section of the data
 	int sum = std::accumulate(begin(section.bounds()), end(section.bounds()), 0,
 	                          [&](int a, offset<3> idx) {
 		return a + section[idx];
@@ -80,7 +77,7 @@ Sectioning creates a new view of the data given a new set of bounds that fully s
 
 ### Strided data
 
-A final class `strided_array_view` relaxes the requirement that the least significant dimension of the referenced data must be contigious. All views created as sections of data return a `strided_array_view`. You can construct a strided view from an `array_view`, or directly with a pointer to data in memory for which you provide the stride.
+An additional class `strided_array_view` relaxes the requirement that the least significant dimension of the referenced data must be contiguous. All views created as sections of data return a `strided_array_view`. You can construct a strided view from an `array_view`, or directly with a pointer to data in memory for which you must provide the stride.
 
 For example, to define a view of our `vec` but of only every third element
 
@@ -96,15 +93,15 @@ For example, to define a view of our `vec` but of only every third element
 		EXPECT_EQ(0, sav[idx] % 3);
 	}
 
-Taking sliced views of contigious data, sections of sliced view and other views of views all compose and work naturally as you would expect.
+Taking sliced views of contiguous data, sections of sliced view and other views of views all compose and work naturally as you would expect.
 
-### Ackwnoldegments
+### Acknowledgements
 
-This work is based almost exclusively on the original proposal by Reis, Laksberg and Gor Nishanov [[1]] and subsequent revisions (latest [revision 7][3]). As i have read, the proposal itself builds on previous work by Callahan, Levanoni and Sutter for their work desiging the original interfaces for C++ AMP.
+This implementation follows the original proposal by Reis, Laksberg and Gor Nishanov [[1]] and subsequent revisions (latest [revision 7][3]). As understood, the proposal itself builds on previous work by Callahan, Levanoni and Sutter for their work designing the original interfaces for C++ AMP.
 
-### Excuses
+### Limitations
 
-My experience implementing the standard is zero, so I am sure this falls way short of the requirements. I needed something working for my purposes; boost didn't fit, i'm not using Windows and i'm not waiting until 2017. Nevertheless, I thought to try and reflect the proposal faithfully as an exercise. All comments & suggestions are very welcome.
+My experience implementing the standard is zero, I expect this to fall short of the requirements for a conforming implementation. I was looking for an immediate solution for my purposes; boost didn't fit, I'm currently not based on Windows and didn't want to wait until 2017. Also I thought this might make a good exercise. All comments & suggestions are very welcome.
 
 
 [1]: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3851.pdf

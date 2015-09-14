@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 2.8)
 project(array_view)
 
-# Tested only on OS X
+# Only tested on OS X
 # Set GTEST_ROOT to point to your GTEST installation
 
 option(BUILD_GTEST "Build GTest with this project" ON)
 
 if(DEFINED ENV{GTEST_ROOT})
-	message("Gtest found at $ENV{GTEST_ROOT}")
+	message("array_view: Using Gtest from GTEST_ROOT at $ENV{GTEST_ROOT}")
 	set(GTEST_ROOT $ENV{GTEST_ROOT})
 else()
-	message(FATAL_ERROR "Gtest not found. Set path to GTest installation in GTEST_ROOT")
+	message(FATAL_ERROR "array_view: Gtest not found. Set path to GTest installation in GTEST_ROOT")
 endif()
 
 
@@ -27,7 +27,7 @@ add_executable(array_view ${gtest_src})
 
 
 if(BUILD_GTEST)
-	# Tested on GTest 1.7.0
+	# Tested with GTest 1.7.0
 	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/gtest")
 	add_subdirectory($ENV{GTEST_ROOT} "${CMAKE_BINARY_DIR}/gtest")
 	target_link_libraries(array_view gtest gtest_main pthread)
