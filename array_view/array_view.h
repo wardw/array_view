@@ -360,8 +360,8 @@ constexpr size_t bounds<Rank>::size() const noexcept
 template <size_t Rank>
 constexpr bool bounds<Rank>::contains(const offset<Rank>& idx) const noexcept
 {
-	for (size_t i=0; i<Rank; ++i) {
-		if ( !(0 <= idx[i] && idx[i] <= (*this)[i]) )  return false;
+	for (size_type i=0; i<Rank; ++i) {
+		if ( !(0 <= idx[i] && idx[i] < (*this)[i]) ) return false;
 	}
 	return true;
 }

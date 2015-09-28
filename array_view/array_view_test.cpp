@@ -52,6 +52,18 @@ TEST(bounds_test, size)
 	EXPECT_EQ(24, b.size());
 }
 
+TEST(bounds, contains)
+{
+	bounds<3> b = {2,3,4};
+	EXPECT_TRUE(b.contains({0,0,0}));
+	EXPECT_TRUE(b.contains({1,2,3}));
+
+	EXPECT_FALSE(b.contains({1,2,4}));
+	EXPECT_FALSE(b.contains({1,3,3}));
+	EXPECT_FALSE(b.contains({2,2,3}));
+	EXPECT_FALSE(b.contains({0,0,-1}));
+}
+
 TEST(bounds_iterator_test, increment)
 {
 	bounds<3> b = {4,5,6};
