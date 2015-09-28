@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 
 using namespace std;
-using namespace hummingbird;
+using namespace av;
 
 template <size_t Rank>
 ostream& operator<<(ostream& os, const offset<Rank>& off)

@@ -141,7 +141,7 @@ constexpr bounds<Rank> operator/(const bounds<Rank>& lhs, ptrdiff_t v);
 
 */
 
-namespace hummingbird
+namespace av
 {
 
 template <size_t Rank> class offset;
@@ -795,7 +795,7 @@ public:
   	{
   		assert(0 <= slice && slice < bounds()[0]);
 
-  		hummingbird::bounds<Rank-1> new_bounds{};
+  		av::bounds<Rank-1> new_bounds{};
   		for (size_t i=0; i<rank-1; ++i) {
   			new_bounds[i] = bounds()[i+1];
   		}
@@ -886,12 +886,12 @@ public:
 	{
 		assert(0 <= slice && slice < bounds()[0]);
 
-  		hummingbird::bounds<Rank-1> new_bounds{};
+  		av::bounds<Rank-1> new_bounds{};
   		for (size_t i=0; i<rank-1; ++i) {
   			new_bounds[i] = bounds()[i+1];
   		}
 
-  		hummingbird::offset<Rank-1> new_stride{};
+  		av::offset<Rank-1> new_stride{};
   		for (size_t i=0; i<rank-1; ++i) {
   			new_stride[i] = stride()[i+1];
   		}
