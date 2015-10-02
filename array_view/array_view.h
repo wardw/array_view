@@ -190,7 +190,7 @@ public:
 	constexpr offset  operator-() const
 	{
 		offset<Rank> copy{*this};
-		for (value_type& elem : offset_) {
+		for (value_type& elem : copy.offset_) {
 			elem *= -1;
 		}
 		return copy;
