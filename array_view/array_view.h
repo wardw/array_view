@@ -595,7 +595,7 @@ bounds_iterator<Rank> bounds_iterator<Rank>::operator--(int)
 template <size_t Rank>
 bounds_iterator<Rank>& bounds_iterator<Rank>::_setOffTheEnd()
 {
-	for (int dim=0; dim<Rank-1; ++dim) {
+	for (size_t dim=0; dim<Rank-1; ++dim) {
 		offset_[dim] = bounds_[dim]-1;
 	}
 	offset_[Rank-1] = bounds_[Rank-1];
