@@ -1,5 +1,6 @@
 #include "array_view/array_view.h"
 
+#include <algorithm>
 #include <iostream>
 #include <numeric>
 #include "gtest/gtest.h"
