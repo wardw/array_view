@@ -206,6 +206,9 @@ private:
 template <size_t Rank>
 constexpr offset<Rank>::offset(std::initializer_list<value_type> il)
 {
+	// A static_assert isn't possible, since `il` is not a constant expression (its number of arguments is a runtime value)
+	assert(il.size() == Rank);
+
 	std::copy(il.begin(), il.end(), offset_.data());
 }
 
@@ -337,10 +340,9 @@ private:
 
 // construction
 template <size_t Rank>
-constexpr bounds<Rank>::bounds(std::initializer_list<value_type> il)
+constexpr bounds<Rank>::bounds(const std::initializer_list<value_type> il)
 {
-	// Todo: fails, try gcc?
-	//static_assert(il.size() == Rank, "Size of Rank must equal the size of the initialiser list");
+	assert(il.size() == Rank);
 
 	std::copy(il.begin(), il.end(), bounds_.data());
 	postcondition();
