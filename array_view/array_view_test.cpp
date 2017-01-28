@@ -20,6 +20,11 @@ ostream& operator<<(ostream& os, const offset<Rank>& off)
 	return os << ")";
 }
 
+TEST(offset_test, BadInitialization)
+{
+	EXPECT_DEATH((offset<2>{1,2,3}), "");
+}
+
 TEST(offset_test, Initialize)
 {
 	offset<1> off0;
