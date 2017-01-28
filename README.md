@@ -1,4 +1,4 @@
-A working implementation of the ISO C++ proposal ["Multidimensional bounds, offset and array_view"][1] by Reis, Laksberg and Gor Nishanov.
+An implementation of the ISO C++ proposal [_Multidimensional bounds, offset and array_view_][1] by Mendakiewicz & Sutter.
 
 Two key ideas behind the proposal are the representation of a multidimensional array as a view over contiguous (or strided) data, and the straightforward expression for multidimensional indexing into these arrays. This allows for iterating over such arrays in a way that works naturally with existing algorithms, among other things.
 
