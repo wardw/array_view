@@ -1,13 +1,8 @@
 #pragma once
 
-#include <cstddef>
 #include <initializer_list>
 #include <array>
-#include <iterator>
 #include <cassert>
-
-// temp
-#include <iostream>
 
 /*
 template <size_t Rank>
