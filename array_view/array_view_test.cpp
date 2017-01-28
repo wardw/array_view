@@ -22,29 +22,27 @@ ostream& operator<<(ostream& os, const offset<Rank>& off)
 
 TEST(offset_test, Initialize)
 {
-	offset<4> off0;
+	offset<1> off0;
 	EXPECT_EQ(0, off0[0]);
-	EXPECT_EQ(0, off0[1]);
-	EXPECT_EQ(0, off0[2]);
-	EXPECT_EQ(0, off0[3]);
 
 	offset<1> off1(4);
 	EXPECT_EQ(4, off1[0]);
 
-	offset<3> off2 = {1,2,3};
-	EXPECT_EQ(1, off2[0]);
-	EXPECT_EQ(2, off2[1]);
-	EXPECT_EQ(3, off2[2]);
+	offset<4> off2;
+	EXPECT_EQ(0, off2[0]);
+	EXPECT_EQ(0, off2[1]);
+	EXPECT_EQ(0, off2[2]);
+	EXPECT_EQ(0, off2[3]);
+
+	offset<3> off3 = {1,2,3};
+	EXPECT_EQ(1, off3[0]);
+	EXPECT_EQ(2, off3[1]);
+	EXPECT_EQ(3, off3[2]);
 
 	// Constraints
-	//offset<0> off3;  // Should not compile: Size of Rank must be greater than 0
+	//offset<0> off3;      // Should not compile: Size of Rank must be greater than 0
 	//offset<0> off3({});  // Should not compile: Size of Rank must be greater than 0
-
-	// todo
-	offset<2> off4 = {1,2,3};  // Should not compile: "Size of Rank must equal the size of the initialiser list"
-
 }
-
 
 TEST(bounds_test, size)
 {
@@ -71,10 +69,10 @@ TEST(bounds_iterator_test, increment)
 
 	for (int i=0; i<(4*5*6); i++)
 	{
-		cout << *iter++ << endl;
+		// cout << *iter++ << endl;
 	}
-	cout << "off-the-end: " << *iter << endl;
-	cout << "--off-the-end: " << *(--iter) << endl;
+	// cout << "off-the-end: " << *iter << endl;
+	// cout << "--off-the-end: " << *(--iter) << endl;
 }
 
 TEST(bounds_iterator_test, decrement)
@@ -84,10 +82,10 @@ TEST(bounds_iterator_test, decrement)
 
 	for (int i=0; i<(4*5*6); i++)
 	{
-		cout << *(--iter) << endl;
+		// cout << *(--iter) << endl;
 	}
-	cout << "before-the-start: " << *(--iter) << endl;
-	cout << "++before-the-start" << *(++iter) << endl;
+	// cout << "before-the-start: " << *(--iter) << endl;
+	// cout << "++before-the-start" << *(++iter) << endl;
 }
 
 TEST(bounds_iterator_test, beginYend)
@@ -97,10 +95,11 @@ TEST(bounds_iterator_test, beginYend)
 	bounds_iterator<3> iter = b.begin();
 	while (iter != b.end())
 	{
-		cout << *iter++ << endl;
+		*iter++;
+		// cout << *iter++ << endl;
 	}
-	cout << "off-the-end: " << *iter << endl;
-	cout << "--off-the-end: " << *(--iter) << endl;
+	// cout << "off-the-end: " << *iter << endl;
+	// cout << "--off-the-end: " << *(--iter) << endl;
 
 	EXPECT_EQ(b.begin(), begin(b));
 	EXPECT_EQ(b.end(), end(b));
@@ -396,6 +395,7 @@ TEST(ArrayView, Example)
 		auto i = idx[0];
 		auto j = idx[1];
 		auto k = idx[2];
+		// cout << i << " " << j << " " << k << endl;
 		EXPECT_EQ(i * j * k, av[idx]);
 	});
 
