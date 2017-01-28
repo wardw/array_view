@@ -201,9 +201,8 @@ private:
 template <size_t Rank>
 constexpr offset<Rank>::offset(std::initializer_list<value_type> il)
 {
-	// A static_assert isn't possible, since `il` is not a constant expression (its number of arguments is a runtime value)
+	// Note `il` is not a constant expression, hence the runtime assert for now
 	assert(il.size() == Rank);
-
 	std::copy(il.begin(), il.end(), offset_.data());
 }
 
@@ -300,7 +299,8 @@ public:
 
 	// construction
 	constexpr bounds() noexcept {};
-	// Question: why is this constructor not `noexcept` ?
+
+	// Question: is there a reason this constructor is not `noexcept` ?
 	template <size_t R = Rank, typename = std::enable_if_t<R == 1>>
 	constexpr bounds(value_type v) { (*this)[0] = v; postcondition(); }
 	constexpr bounds(std::initializer_list<value_type> il);
@@ -460,8 +460,6 @@ bounds_iterator<Rank> end(const bounds<Rank>& b) noexcept
 
 template <size_t Rank>
 class bounds_iterator
-	// : public iterator<random_access_iterator_tag,
-    //                   offset<Rank>, ptrdiff_t, offset<Rank>*, offset<Rank>&>
 {
 public:
 	using iterator_category = std::random_access_iterator_tag; // unspecified but satisfactory
@@ -510,30 +508,6 @@ private:
 	bounds<Rank> bounds_;
 	offset<Rank> offset_;
 };
-
-// template <size_t Rank>
-// bounds_iterator<Rank>& bounds_iterator<Rank>::operator++()
-// {
-// 	// todo: replace with iterative equivalent
-// 	std::function<void(size_t)> increment = [&](size_t dim)
-// 	{ 
-// 		if (dim == -1) {
-// 			offset_[0] = -1;
-// 			return;
-// 		}
-			
-// 		if (++offset_[dim] < bounds_[dim]) {
-// 			return;
-// 		}
-// 		else {
-// 			offset_[dim] = 0;
-// 			increment(dim-1);
-// 		}
-// 	};
-
-// 	increment(Rank-1);
-//     return (*this);
-// }
 
 template <size_t Rank>
 bounds_iterator<Rank> bounds_iterator<Rank>::operator++(int)
@@ -685,13 +659,6 @@ namespace {
 
 		>;
 
-	// template <typename Viewable, ValueType, Pointer>
-	// using is_viewable_on_u = std::integral_constant<bool,
-	// 		std::is_convertible<typename Viewable::size_type, ptrdiff_t>::value &&
-	// 		std::is_convertible<typename Viewable::pointer, Pointer>::value &&
-	// 		std::is_same<std::remove_cv_t<typename Viewable::value_type>, std::remove_cv_t<ValueType>>::value
-	// 	>;
-
 	template <typename T, typename U>
 	using is_viewable_value = std::integral_constant<bool,
 			std::is_convertible<std::add_pointer_t<T>, std::add_pointer_t<U>>::value &&
@@ -733,38 +700,27 @@ public:
 	                                      // todo: && decay_t<Viewable> is not a specialization of array_view
 	                                     >
 	         >
+	// todo: assert static_cast<U*>(vw.data()) points to contigious data of at least vw.size()
 	constexpr array_view(Viewable&& vw) : data_(vw.data()), bounds_(vw.size()) {
-		// todo assert static_cast<U*>(vw.data()) points to contigious data
-		// of at least vw.size()
 	}
 
 	template <typename U, size_t R = Rank,
-	          typename = std::enable_if_t<R == 1 &&
-	                                      //std::is_convertible<std::add_pointer_t<U>, pointer>::value && 
-		                                  //std::is_same<std::remove_cv_t<U>, std::remove_cv_t<value_type>>::value
-		                                  is_viewable_value<U, value_type>::value
-	                                     >
-	>
+	          typename = std::enable_if_t<R == 1 && is_viewable_value<U, value_type>::value>>
   	constexpr array_view(const array_view<U, R>& rhs) noexcept
   		: data_(rhs.data()), bounds_(rhs.bounds()) {}
 
 	template <size_t Extent,
-	          typename = std::enable_if_t<Extent == 1> >
+	          typename = std::enable_if_t<Extent == 1>>
 	constexpr array_view(value_type (&arr)[Extent]) noexcept
 		: data_(arr), bounds_(Extent) {}
 
 	template <typename U,
-	          typename = std::enable_if_t<is_viewable_value<U, value_type>::value
-	                                      //std::is_convertible<std::add_pointer_t<U>, pointer>::value && 
-		                                  //std::is_same<std::remove_cv_t<U>, std::remove_cv_t<value_type>>::value
-	                                     >
-	>
+	          typename = std::enable_if_t<is_viewable_value<U, value_type>::value>>
  	constexpr array_view(const array_view<U, Rank>& rhs) noexcept
  		: data_(rhs.data()), bounds_(rhs.bounds()) {}
 
  	template <typename Viewable,
- 	          typename = std::enable_if_t<is_viewable_on_u<Viewable, value_type>::value>
- 	         >
+ 	          typename = std::enable_if_t<is_viewable_on_u<Viewable, value_type>::value>>
  	constexpr array_view(Viewable&& vw, bounds_type bounds)
  		: data_(vw.data()), bounds_(bounds)
 	{
@@ -777,7 +733,7 @@ public:
  	// observers
  	constexpr bounds_type bounds() const noexcept { return bounds_; }
  	constexpr size_type   size()   const noexcept { return bounds().size(); }
- 	constexpr offset_type stride() const noexcept;// { return stride_; }
+ 	constexpr offset_type stride() const noexcept;
  	constexpr pointer     data()   const noexcept { return data_; }
 
  	constexpr reference operator[](const offset_type& idx) const
@@ -806,7 +762,7 @@ public:
   	section(const offset_type& origin, const bounds_type& section_bounds) const
   	{
 		// todo: requirement is for any idx in section_bounds (boundary fail)
-  		//assert(bounds().contains(origin + section_bounds) == true);
+  		// assert(bounds().contains(origin + section_bounds) == true);
   		return strided_array_view<T, Rank>(&(*this)[origin], section_bounds, stride());
   	}
 
@@ -862,7 +818,7 @@ public:
 	constexpr strided_array_view(pointer ptr, bounds_type bounds, offset_type stride)
 		: data_(ptr), bounds_(bounds), stride_(stride)
 	{
-		// assert that sum(idx[i] * stride[i]) fits in ptrdiff_t
+		// todo: assert that sum(idx[i] * stride[i]) fits in ptrdiff_t
 	}
 
 	// observers
@@ -902,7 +858,7 @@ public:
 	section(const offset_type& origin, const bounds_type& section_bounds) const
 	{
 		// todo: requirement is for any idx in section_bounds (boundary fail)
-		//assert(bounds().contains(origin + section_bounds) == true);
+		// assert(bounds().contains(origin + section_bounds) == true);
   		return strided_array_view<T, Rank>(&(*this)[origin], section_bounds, stride());
 	}
 
@@ -919,7 +875,5 @@ private:
 	bounds_type bounds_;
 	offset_type stride_;
 };
-
-
 
 }
