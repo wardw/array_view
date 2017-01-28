@@ -134,6 +134,126 @@ template <size_t Rank>
 constexpr bounds<Rank> operator/(const bounds<Rank>& lhs, ptrdiff_t v);
 
 
+template <size_t Rank>
+class bounds_iterator
+{
+public:
+	using iterator_category = unspecified;
+	using value_type        = offset<Rank>;
+	using difference_type   = ptrdiff_t;
+	using pointer           = unspecified;
+	using reference         = const offset<Rank>;
+
+	bounds_iterator& operator++();
+	bounds_iterator  operator++(int);
+	bounds_iterator& operator--();
+	bounds_iterator  operator--(int);
+
+	bounds_iterator  operator+(difference_type n) const;
+	bounds_iterator& operator+=(difference_type n);
+	bounds_iterator  operator-(difference_type n) const;
+	bounds_iterator& operator-=(difference_type n);
+
+	difference_type  operator-(const bounds_iterator& rhs) const;
+
+	reference operator*() const;
+	pointer   operator->() const;
+	reference operator[](difference_type n) const;
+};
+
+template <typename T, size_t Rank = 1>
+class array_view
+{
+public:
+	static constexpr size_t rank = Rank;
+	using offset_type            = offset<Rank>;
+	using bounds_type            = bounds<Rank>;
+	using size_type              = size_t;
+	using value_type             = T;
+	using pointer                = T*;
+	using reference              = T&;
+
+	constexpr array_view() noexcept;
+
+	template <typename Viewable>             // only if Rank == 1
+	constexpr array_view(Viewable&& vw);
+
+	template <typename U, size_t R = Rank>   // only if Rank == 1
+  	constexpr array_view(const array_view<U, R>& rhs) noexcept;
+
+	template <size_t Extent>                 // only if Rank == 1
+	constexpr array_view(value_type (&arr)[Extent]) noexcept;
+
+	template <typename U>
+ 	constexpr array_view(const array_view<U, Rank>& rhs) noexcept;
+
+ 	template <typename Viewable>
+ 	constexpr array_view(Viewable&& vw, bounds_type bounds);
+
+ 	constexpr array_view(pointer ptr, bounds_type bounds);
+
+ 	// observers
+ 	constexpr bounds_type bounds() const noexcept;
+ 	constexpr size_type   size()   const noexcept;
+ 	constexpr offset_type stride() const noexcept;
+ 	constexpr pointer     data()   const noexcept;
+
+ 	constexpr reference operator[](const offset_type& idx) const;
+
+	// slicing and sectioning
+ 	template <size_t R = Rank>                // only if Rank > 1
+ 	constexpr array_view<T, Rank-1> operator[](ptrdiff_t slice) const;
+
+  	constexpr strided_array_view<T, Rank>
+  	section(const offset_type& origin, const bounds_type& section_bounds) const;
+
+  	constexpr strided_array_view<T, Rank>
+  	section(const offset_type& origin) const;
+};
+
+
+template <class T, size_t Rank = 1>
+class strided_array_view
+{
+public:
+	// constants and types
+	static constexpr size_t rank = Rank;
+	using offset_type            = offset<Rank>;
+	using bounds_type            = bounds<Rank>;
+	using size_type              = size_t;
+	using value_type             = T;
+	using pointer                = T*;
+	using reference              = T&;
+
+	// constructors, copy, and assignment
+	constexpr strided_array_view() noexcept;
+
+	template <typename U>
+	constexpr strided_array_view(const array_view<U, Rank>& rhs) noexcept;
+
+	template <typename U>
+	constexpr strided_array_view(const strided_array_view<U, Rank>& rhs) noexcept;
+
+	constexpr strided_array_view(pointer ptr, bounds_type bounds, offset_type stride);
+
+	// observers
+	constexpr bounds_type bounds() const noexcept;
+	constexpr size_type   size()   const noexcept;
+	constexpr offset_type stride() const noexcept;
+
+	// element access
+	constexpr reference operator[](const offset_type& idx) const;
+
+	// slicing and sectioning
+ 	template <size_t R = Rank>                // Only if Rank > 1
+	constexpr strided_array_view<T, Rank-1> operator[](ptrdiff_t slice) const;
+
+	constexpr strided_array_view<T, Rank>
+	section(const offset_type& origin, const bounds_type& section_bounds) const;
+
+	constexpr strided_array_view<T, Rank>
+	section(const offset_type& origin) const;
+};
 */
 
 namespace av
