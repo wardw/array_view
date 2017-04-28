@@ -7,6 +7,7 @@ project(array_view)
 option(BUILD_GTEST "Build GTest with this project" ON)
 SET(GTEST_ROOT $ENV{GTEST_ROOT} CACHE PATH "Path to GTest")
 message("Using GTest at ${GTEST_ROOT}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 # Build
 include_directories(".")

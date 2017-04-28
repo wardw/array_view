@@ -686,7 +686,7 @@ bounds_iterator<Rank> bounds_iterator<Rank>::operator--(int)
 template <size_t Rank>
 bounds_iterator<Rank>& bounds_iterator<Rank>::_setOffTheEnd()
 {
-	for (int dim=0; dim<Rank-1; ++dim) {
+	for (size_t dim=0; dim<Rank-1; ++dim) {
 		offset_[dim] = bounds_[dim]-1;
 	}
 	offset_[Rank-1] = bounds_[Rank-1];
@@ -803,8 +803,8 @@ class array_view
 {
 public:
 	static constexpr size_t rank = Rank;
-	using offset_type            = av::offset<Rank>;
-	using bounds_type            = av::bounds<Rank>;
+	using offset_type            = offset<Rank>;
+	using bounds_type            = class bounds<Rank>;
 	using size_type              = size_t;
 	using value_type             = T;
 	using pointer                = T*;
@@ -917,8 +917,8 @@ class strided_array_view
 public:
 	// constants and types
 	static constexpr size_t rank = Rank;
-	using offset_type            = av::offset<Rank>;
-	using bounds_type            = av::bounds<Rank>;
+	using offset_type            = offset<Rank>;
+	using bounds_type            = class bounds<Rank>;
 	using size_type              = size_t;
 	using value_type             = T;
 	using pointer                = T*;
