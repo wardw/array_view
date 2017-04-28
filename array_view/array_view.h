@@ -271,10 +271,10 @@ class offset
 public:
 	// constants and types
 	static constexpr size_t rank = Rank;
-	using reference              = ptrdiff_t&;
-	using const_reference        = const ptrdiff_t&;
+	using reference              = std::ptrdiff_t&;
+	using const_reference        = const std::ptrdiff_t&;
 	using size_type              = size_t;
-	using value_type             = ptrdiff_t;
+	using value_type             = std::ptrdiff_t;
 
 	static_assert(Rank > 0, "Size of Rank must be greater than 0");
 
@@ -390,15 +390,15 @@ constexpr offset<Rank> operator-(const offset<Rank>& lhs, const offset<Rank>& rh
 { return offset<Rank>{lhs} -= rhs; }
 
 template <size_t Rank>
-constexpr offset<Rank> operator*(const offset<Rank>& lhs, ptrdiff_t v)
+constexpr offset<Rank> operator*(const offset<Rank>& lhs, std::ptrdiff_t v)
 { return offset<Rank>{lhs} *= v; }
 
 template <size_t Rank>
-constexpr offset<Rank> operator*(ptrdiff_t v, const offset<Rank>& rhs)
+constexpr offset<Rank> operator*(std::ptrdiff_t v, const offset<Rank>& rhs)
 { return offset<Rank>{rhs} *= v; }
 
 template <size_t Rank>
-constexpr offset<Rank> operator/(const offset<Rank>& lhs, ptrdiff_t v)
+constexpr offset<Rank> operator/(const offset<Rank>& lhs, std::ptrdiff_t v)
 { return offset<Rank>{lhs} /= v; }
 
 
@@ -408,12 +408,12 @@ class bounds
 public:
 	// constants and types
 	static constexpr size_t rank = Rank;
-	using reference              = ptrdiff_t&;
-	using const_reference        = const ptrdiff_t&;
+	using reference              = std::ptrdiff_t&;
+	using const_reference        = const std::ptrdiff_t&;
 	using iterator               = bounds_iterator<Rank>;
 	using const_iterator         = bounds_iterator<Rank>;
 	using size_type              = size_t;
-	using value_type             = ptrdiff_t;
+	using value_type             = std::ptrdiff_t;
 
 	static_assert(Rank > 0, "Size of Rank must be greater than 0");
 
@@ -558,15 +558,15 @@ constexpr bounds<Rank> operator-(const bounds<Rank>& lhs, const offset<Rank>& rh
 { return bounds<Rank>{lhs} -= rhs; }
 
 template <size_t Rank>
-constexpr bounds<Rank> operator*(const bounds<Rank>& lhs, ptrdiff_t v)
+constexpr bounds<Rank> operator*(const bounds<Rank>& lhs, std::ptrdiff_t v)
 { return bounds<Rank>{lhs} *= v; }
 
 template <size_t Rank>
-constexpr bounds<Rank> operator*(ptrdiff_t v, const bounds<Rank>& rhs)
+constexpr bounds<Rank> operator*(std::ptrdiff_t v, const bounds<Rank>& rhs)
 { return bounds<Rank>{rhs} *= v; }
 
 template <size_t Rank>
-constexpr bounds<Rank> operator/(const bounds<Rank>& lhs, ptrdiff_t v)
+constexpr bounds<Rank> operator/(const bounds<Rank>& lhs, std::ptrdiff_t v)
 { return bounds<Rank>{lhs} /= v; }
 
 template <size_t Rank>
@@ -584,7 +584,7 @@ class bounds_iterator
 public:
 	using iterator_category = std::random_access_iterator_tag; // unspecified but satisfactory
 	using value_type        = offset<Rank>;
-	using difference_type   = ptrdiff_t;
+	using difference_type   = std::ptrdiff_t;
 	using pointer           = offset<Rank>*;  // unspecified but satisfactory (?)
 	using reference         = const offset<Rank>;
 
@@ -773,7 +773,7 @@ namespace {
 
 	template <typename Viewable, typename U, typename View = std::remove_reference_t<Viewable>>
 	using is_viewable_on_u = std::integral_constant<bool,
-			std::is_convertible<typename View::size_type, ptrdiff_t>::value &&
+			std::is_convertible<typename View::size_type, std::ptrdiff_t>::value &&
 			std::is_convertible<typename View::value_type*, std::add_pointer_t<U>>::value &&
 			std::is_same<std::remove_cv_t<typename View::value_type>, std::remove_cv_t<U>>::value
 
@@ -788,7 +788,7 @@ namespace {
 	template <typename T, size_t Rank>
 	constexpr T& view_access(T* data, const offset<Rank>& idx, const offset<Rank>& stride)
 	{
-		ptrdiff_t off{};
+		std::ptrdiff_t off{};
 		for (size_t i=0; i<Rank; ++i)
 		{
 			off += idx[i] * stride[i];
@@ -803,8 +803,8 @@ class array_view
 {
 public:
 	static constexpr size_t rank = Rank;
-	using offset_type            = offset<Rank>;
-	using bounds_type            = bounds<Rank>;
+	using offset_type            = av::offset<Rank>;
+	using bounds_type            = av::bounds<Rank>;
 	using size_type              = size_t;
 	using value_type             = T;
 	using pointer                = T*;
@@ -864,7 +864,7 @@ public:
 
 	// slicing and sectioning
  	template <size_t R = Rank, typename = std::enable_if_t< R>=2 >>
- 	constexpr array_view<T, Rank-1> operator[](ptrdiff_t slice) const
+ 	constexpr array_view<T, Rank-1> operator[](std::ptrdiff_t slice) const
   	{
   		assert(0 <= slice && slice < bounds()[0]);
 
@@ -873,7 +873,7 @@ public:
   			new_bounds[i] = bounds()[i+1];
   		}
 
-  		ptrdiff_t off = slice * stride()[0];
+  		std::ptrdiff_t off = slice * stride()[0];
 
   		return array_view<T, Rank-1>(data_ + off, new_bounds);
   	}
@@ -917,8 +917,8 @@ class strided_array_view
 public:
 	// constants and types
 	static constexpr size_t rank = Rank;
-	using offset_type            = offset<Rank>;
-	using bounds_type            = bounds<Rank>;
+	using offset_type            = av::offset<Rank>;
+	using bounds_type            = av::bounds<Rank>;
 	using size_type              = size_t;
 	using value_type             = T;
 	using pointer                = T*;
@@ -938,7 +938,7 @@ public:
 	constexpr strided_array_view(pointer ptr, bounds_type bounds, offset_type stride)
 		: data_(ptr), bounds_(bounds), stride_(stride)
 	{
-		// todo: assert that sum(idx[i] * stride[i]) fits in ptrdiff_t
+		// todo: assert that sum(idx[i] * stride[i]) fits in std::ptrdiff_t
 	}
 
 	// observers
@@ -955,7 +955,7 @@ public:
 
 	// slicing and sectioning
  	template <size_t R = Rank, typename = std::enable_if_t< R>=2 >>
-	constexpr strided_array_view<T, Rank-1> operator[](ptrdiff_t slice) const
+	constexpr strided_array_view<T, Rank-1> operator[](std::ptrdiff_t slice) const
 	{
 		assert(0 <= slice && slice < bounds()[0]);
 
@@ -969,7 +969,7 @@ public:
   			new_stride[i] = stride()[i+1];
   		}
 
-  		ptrdiff_t off = slice * stride()[0];
+  		std::ptrdiff_t off = slice * stride()[0];
 
   		return strided_array_view<T, Rank-1>(data_ + off, new_bounds, new_stride);
 	}

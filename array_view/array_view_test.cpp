@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <numeric>
+#include <algorithm>
+
 #include "gtest/gtest.h"
 
 using namespace std;

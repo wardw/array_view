@@ -12,7 +12,9 @@ message("Using GTest at ${GTEST_ROOT}")
 include_directories(".")
 set(gtest_src "array_view/array_view_test.cpp")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+
 add_executable(array_view ${gtest_src})
+target_link_libraries(array_view stdc++)
 
 # Link Gtest
 if(BUILD_GTEST)
