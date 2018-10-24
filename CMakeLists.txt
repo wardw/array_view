@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(array_view)
 
-option(BUILD_TESTS "Build unit tests. Requires GTest." ON)
-option(BUILD_GTEST "Build GTest along with this project (ON) or use an existing installation (OFF)." ON)
+option(AV_BUILD_TESTS "Build unit tests. Requires GTest." ON)
+option(AV_BUILD_GTEST "Build GTest along with this project (ON) or use an existing installation (OFF)." ON)
 
 # An interface target for array_view
 add_library(array_view INTERFACE)
@@ -17,15 +17,16 @@ export(TARGETS array_view
 	FILE array_viewConfig.cmake
 )
 
-if(BUILD_TESTS)
+if(AV_BUILD_TESTS)
 
 	add_executable(av_test "array_view/array_view_test.cpp")
 	target_link_libraries(av_test array_view::array_view )
 
-	if(BUILD_GTEST)
+	if(AV_BUILD_GTEST)
 		set(GTEST_ROOT $ENV{GTEST_ROOT} CACHE PATH "Path to GTest directory")
 		if("${GTEST_ROOT}" STREQUAL "")
-    		message(FATAL_ERROR "GTEST_ROOT unspecified. Set GTEST_ROOT to point to your GTest directory.")
+    		message(FATAL_ERROR "To build GTest, set GTEST_ROOT to point to your GTest folder, "
+    			                "or disable building with this project.")
 		endif()
 
 		file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/gtest")
