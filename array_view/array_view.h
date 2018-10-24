@@ -804,7 +804,7 @@ class array_view
 public:
 	static constexpr size_t rank = Rank;
 	using offset_type            = offset<Rank>;
-	using bounds_type            = typename bounds<Rank>;
+	using bounds_type            = av::bounds<Rank>;
 	using size_type              = size_t;
 	using value_type             = T;
 	using pointer                = T*;
@@ -918,7 +918,7 @@ public:
 	// constants and types
 	static constexpr size_t rank = Rank;
 	using offset_type            = offset<Rank>;
-	using bounds_type            = typename bounds<Rank>;
+	using bounds_type            = av::bounds<Rank>;
 	using size_type              = size_t;
 	using value_type             = T;
 	using pointer                = T*;
