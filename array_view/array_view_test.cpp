@@ -22,10 +22,12 @@ ostream& operator<<(ostream& os, const offset<Rank>& off)
 	return os << ")";
 }
 
+#ifndef NDEBUG
 TEST(offset_test, BadInitialization)
 {
 	EXPECT_DEATH((offset<2>{1,2,3}), "");
 }
+#endif
 
 TEST(offset_test, Initialize)
 {
