@@ -1,38 +1,27 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 project(array_view)
 
-# Tested with GTest 1.7.0 on OS X
+option(BUILD_TESTS "Build unit tests. Requires GTest." ON)
 
-# Set GTest path
-option(BUILD_GTEST "Build GTest with this project" ON)
-SET(GTEST_ROOT $ENV{GTEST_ROOT} CACHE PATH "Path to GTest")
-message("Using GTest at ${GTEST_ROOT}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+# An interface target for array_view
+add_library(array_view INTERFACE)
+add_library(array_view::array_view ALIAS array_view)
 
-# Build
-include_directories(".")
-set(gtest_src "array_view/array_view_test.cpp")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+target_include_directories(array_view INTERFACE .)
+target_compile_features(array_view INTERFACE cxx_std_14)
 
-add_executable(array_view ${gtest_src})
-target_link_libraries(array_view stdc++)
+# Export target, importable from build directory
+export(TARGETS array_view
+	NAMESPACE array_view::
+	FILE array_viewConfig.cmake
+)
 
-# Link Gtest
-if(BUILD_GTEST)
-	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/gtest")
-	add_subdirectory("${GTEST_ROOT}" "${CMAKE_BINARY_DIR}/gtest")
-	include_directories("${GTEST_ROOT}/include")
-	target_link_libraries(array_view gtest gtest_main pthread)
-else()
-	# Use existing libs
+if(BUILD_TESTS)
 	find_package(GTest REQUIRED)
-	include_directories("${GTEST_INCLUDE_DIRS}")
-	target_link_libraries(array_view ${GTEST_BOTH_LIBRARIES})
+
+	add_executable(av_test
+		"array_view/array_view_test.cpp")
+
+	target_link_libraries(av_test
+		array_view::array_view GTest::GTest GTest::Main)
 endif()
-
-
-# CTest. Doing it this way ensures 'make check' depends on the array_view build target
-enable_testing()
-
-add_test(NAME all COMMAND array_view)
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS array_view)
